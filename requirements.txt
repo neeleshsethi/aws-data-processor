@@ -1,0 +1,7 @@
+pandas
+boto3
+loguru
+pydantic
+pydantic-settings
+psycopg2
+pytest
