@@ -4,3 +4,16 @@ README.md
 src/lambda.egg-info/
 /.DS_Store/
 __pycache__
+lambda.egg-info
+
+*.swp
+package-lock.json
+__pycache__
+.pytest_cache
+.venv
+*.egg-info
+
+# CDK asset staging directory
+.cdk.staging
+/cdk.out/
+
