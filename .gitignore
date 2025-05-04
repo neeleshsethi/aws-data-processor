@@ -1,6 +1,6 @@
 /templates/
 .venv
-/src/lambda/
 README.md
-/lambda.egg-info/
+src/lambda.egg-info/
 /.DS_Store/
+__pycache__
