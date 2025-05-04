@@ -3,7 +3,6 @@ CDK Stack for California Housing Data Processing Pipeline
 """
 from aws_cdk import (
     Stack,
-    core,
     aws_s3 as s3,
     aws_lambda as lambda_,
     aws_ec2 as ec2,
@@ -14,6 +13,9 @@ from aws_cdk import (
     aws_logs as logs,
     aws_kms as kms,
 )
+import aws_cdk as core
+
+
 from constructs import Construct
 
 class CaliforniaHousingPipelineStack(Stack):
@@ -44,7 +46,7 @@ class CaliforniaHousingPipelineStack(Stack):
 
         self.data_bucket = self._create_data_bucket(encryption_key)
 
-        self.db_security_group , self.lambda_security_group = self._create_security_groups()
+        self.db_security_group , self.lambda_security_group = self._create_security_group()
 
         self.db_credentials = self._create_db_credentials(encryption_key)
 
@@ -108,10 +110,8 @@ class CaliforniaHousingPipelineStack(Stack):
             "DatabaseSecurityGroup",
             vpc=self.vpc,
             description="Security group for RDS PostgreSQL",
-            allowed_all_outbound=False
-
-
-    )
+            allow_all_outbound=False
+        )
 
         lambda_security_group = ec2.SecurityGroup(
             self,
@@ -119,7 +119,6 @@ class CaliforniaHousingPipelineStack(Stack):
             vpc=self.vpc,
             description="Security group for Lambda function",
             allow_all_outbound=True
-
         )
 
         db_security_group.add_ingress_rule(
@@ -152,6 +151,7 @@ class CaliforniaHousingPipelineStack(Stack):
     def _create_database(self) -> rds.DatabaseInstance:
         return rds.DatabaseInstance(
             self,
+            "HousingDataDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_14),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
@@ -160,7 +160,7 @@ class CaliforniaHousingPipelineStack(Stack):
             vpc=self.vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             security_groups=[self.db_security_group],
-            credentials=rds.from_secret(self.db_credentials),
+            credentials=rds.Credentials.from_secret(self.db_credentials),
             database_name="housing_data",
             allocated_storage=20,
             storage_encrypted=True,
@@ -198,16 +198,16 @@ class CaliforniaHousingPipelineStack(Stack):
             function_name=f"california-housing-processor-{self.env_name}",
             runtime=lambda_.Runtime.PYTHON_3_11,
             code=lambda_.Code.from_asset(
-                "src",
+                ".",
                 bundling=core.BundlingOptions(
                     image=lambda_.Runtime.PYTHON_3_11.bundling_image,
                     command=[
                         "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -r lambda_functions /asset-output/"
+                        "pip install -r requirements.txt -t /asset-output && cp -r src/lambda_functions/* /asset-output/"
                     ]
                 )
             ),
-            handler="lambda_functions.handler.handler",
+            handler="handler.handler",
             timeout=core.Duration.minutes(5),
             memory_size=1024,
             vpc=self.vpc,
