@@ -19,7 +19,7 @@ Table of Contents
 Architecture Overview
 ---------------------
 
-![Architecture Diagram](https://placeholder-for-architecture-diagram.png/)
+![Architecture Diagram](docs/dataprocessing.png)
 
 The pipeline consists of these core components:
 
