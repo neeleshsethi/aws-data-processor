@@ -6,15 +6,15 @@ A scalable, secure, and cost-effective AWS pipeline for processing California Ho
 Table of Contents
 -----------------
 
--   [Architecture Overview](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#architecture-overview)
--   [Features](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#features)
--   [Prerequisites](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#prerequisites)
--   [Deployment Instructions](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#deployment-instructions)
--   [Testing the Solution](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#testing-the-solution)
--   [Architecture Decisions and Trade-offs](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#architecture-decisions-and-trade-offs)
--   [Security Considerations](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#security-considerations)
--   [Operational Considerations](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#operational-considerations)
--   [Future Enhancements](https://claude.ai/chat/507ba028-ea5a-429e-8f2c-459922d549ec#future-enhancements)
+-   [Architecture Overview](#architecture-overview)
+-   [Features](#features)
+-   [Prerequisites](#prerequisites)
+-   [Deployment Instructions](#deployment-instructions)
+-   [Testing the Solution](#testing-the-solution)
+-   [Architecture Decisions and Trade-offs](#architecture-decisions-and-trade-offs)
+-   [Security Considerations](#security-considerations)
+-   [Operational Considerations](#operational-considerations)
+-   [Future Enhancements](#future-enhancements)
 
 Architecture Overview
 ---------------------
