@@ -228,7 +228,7 @@ class CaliforniaHousingPipelineStack(Stack):
             function_name=f"california-housing-processor-{self.env_name}",
             runtime=lambda_.Runtime.PYTHON_3_11,
             code=lambda_.Code.from_asset("src",  exclude=["__pycache__", "*.pyc"]),
-            handler="handler.handler",
+            handler="lambda_functions.handler.handler",
             timeout=core.Duration.minutes(5),
             memory_size=1024,
             layers=[dependencies_layer],
