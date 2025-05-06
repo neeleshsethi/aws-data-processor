@@ -65,3 +65,38 @@ def _get_secret_from_secrets_manager(secret_name: str) -> Dict[str, str]:
     except Exception as e:
         logger.error(f"Error retrieving secret from Secrets Manager: {str(e)}")
         raise
+
+def format_query_results(results):
+        """
+        Format database query results into a readable string.
+        
+        Args:
+            results: List of tuples containing query results
+            
+        Returns:
+            Formatted string representation of the results
+        """
+        if not results:
+            return "No results found."
+        
+        # Extract timestamp from first record (they should all be the same)
+        timestamp = results[0][3].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Create header
+        header = f"California Housing Data Summary (processed at {timestamp})\n"
+        header += "-" * 80 + "\n"
+        header += f"{'Category':<15} {'Average Value ($)':>20} {'Record Count':>15}\n"
+        header += "-" * 80
+        
+        # Format each row
+        rows = []
+        for category, avg_value, count, _ in results:
+            # Format the average value with commas and 2 decimal places
+            formatted_value = f"${float(avg_value):,.2f}"
+            formatted_count = f"{count:,}"
+            rows.append(f"{category:<15} {formatted_value:>20} {formatted_count:>15}")
+        
+        # Combine everything
+        formatted_result = header + "\n" + "\n".join(rows)
+        
+        return formatted_result

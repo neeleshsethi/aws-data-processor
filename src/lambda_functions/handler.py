@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Tuple
 
 from lambda_functions.data_processor import process_california_housing_data
 from lambda_functions.db_connector import RDSConnector
-from lambda_functions.utils import setup_logging, get_db_credentials
+from lambda_functions.utils import setup_logging, get_db_credentials, format_query_results
 from loguru import logger
 
 # Configure logging
@@ -37,7 +37,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Extract bucket and key from the S3 event
         bucket, key = _extract_s3_info(event)
         logger.info(f"Processing file {key} from bucket {bucket}")
-        
         # Download file from S3
         download_path = f"/tmp/{os.path.basename(key)}"
         s3_client.download_file(bucket, key, download_path)
@@ -55,6 +54,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info("Querying database to validate insertion")
             latest_stats = db.query_latest_statistics()
             logger.info(f"Successfully retrieved {len(latest_stats)} records from database")
+            formatted_results = format_query_results(latest_stats)
+            logger.info(f"Housing data summary:\n{formatted_results}")
         
         # Clean up
         os.remove(download_path)

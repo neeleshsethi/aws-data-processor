@@ -46,6 +46,8 @@ class CaliforniaHousingPipelineStack(Stack):
         encryption_key = kms.Key.from_key_arn(self, "ImportedKey", key.key_arn)
 
         self.vpc = self._create_vpc()
+        
+        self.s3_endpoint, self.secrets_endpoint, self.logs_endpoint = self._create_vpc_endpoints()
 
         self.data_bucket = self._create_data_bucket(encryption_key)
 
@@ -86,6 +88,41 @@ class CaliforniaHousingPipelineStack(Stack):
             ]
 
         )
+   
+    def _create_vpc_endpoints(self):
+        # Create VPC endpoint for S3
+        s3_endpoint = ec2.GatewayVpcEndpoint(
+            self,
+            "S3Endpoint",
+            vpc=self.vpc,
+            service=ec2.GatewayVpcEndpointAwsService.S3
+        )
+        
+        # Create VPC endpoint for Secrets Manager (needed to access DB credentials)
+        secrets_manager_endpoint = ec2.InterfaceVpcEndpoint(
+            self,
+            "SecretsManagerEndpoint",
+            vpc=self.vpc,
+            service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+            private_dns_enabled=True,
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            )
+        )
+        
+        # If using CloudWatch Logs, you'll also need this endpoint
+        logs_endpoint = ec2.InterfaceVpcEndpoint(
+            self,
+            "CloudWatchLogsEndpoint",
+            vpc=self.vpc,
+            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+            private_dns_enabled=True,
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            )
+        )
+        
+        return s3_endpoint, secrets_manager_endpoint, logs_endpoint
 
     def _create_data_bucket(self, encryption_key: IKey):
         return s3.Bucket(self,
