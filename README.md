@@ -149,6 +149,7 @@ SELECT * FROM housing_summary_statistics;
 
 ```
 pytest tests/
+pyright
 
 ```
 

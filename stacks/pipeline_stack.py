@@ -14,7 +14,9 @@ from aws_cdk import (
     aws_kms as kms,
 )
 import aws_cdk as core
-
+from aws_cdk.aws_kms import IKey
+from aws_cdk.aws_secretsmanager import ISecret
+from aws_cdk.aws_iam import IPrincipal
 
 from constructs import Construct
 
@@ -33,7 +35,7 @@ class CaliforniaHousingPipelineStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         self.env_name = env_name
 
-        encryption_key = kms.Key(
+        key = kms.Key(
             self,
             "EncryptionKey",
             alias=f"alias/california-housing-{self.env_name}",
@@ -41,6 +43,7 @@ class CaliforniaHousingPipelineStack(Stack):
             enable_key_rotation=True,
 
         )
+        encryption_key = kms.Key.from_key_arn(self, "ImportedKey", key.key_arn)
 
         self.vpc = self._create_vpc()
 
@@ -56,6 +59,8 @@ class CaliforniaHousingPipelineStack(Stack):
 
         # Create Lambda function and role
         self.lambda_role = self._create_lambda_role()
+        self.lambda_layer = self._create_lambda_layer()
+
         self.processing_lambda = self._create_lambda_function()
 
         self._configure_s3_trigger()
@@ -82,7 +87,7 @@ class CaliforniaHousingPipelineStack(Stack):
 
         )
 
-    def _create_data_bucket(self, encryption_key: kms.Key):
+    def _create_data_bucket(self, encryption_key: IKey):
         return s3.Bucket(self,
                         "CaliforniaHousingDataBucket",
                         bucket_name=f"california-housing-data-{self.env_name}-{core.Aws.ACCOUNT_ID}",
@@ -130,23 +135,20 @@ class CaliforniaHousingPipelineStack(Stack):
         return db_security_group, lambda_security_group
     
 
-    def _create_db_credentials(self, encryption_key: kms.Key) -> secretsmanager.Secret:
-        return secretsmanager.Secret(
+    def _create_db_credentials(self, encryption_key: IKey) -> ISecret:
+        secret = secretsmanager.Secret(
             self,
             "DBCredentials",
             secret_name=f"california-housing-db-credentials-{self.env_name}",
             description="Credentials for california rds database",
             encryption_key=encryption_key,
             generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template='{"username": "housing_admin"}',
+                secret_string_template='{"username": "db_admin_user"}',
                 generate_string_key="password",
                 exclude_characters="\"@/\\"
             )
-
-
         )
-        
-        
+        return secretsmanager.Secret.from_secret_name_v2(self, "ImportedSecret", secret.secret_name)
 
     def _create_database(self) -> rds.DatabaseInstance:
         return rds.DatabaseInstance(
@@ -181,7 +183,7 @@ class CaliforniaHousingPipelineStack(Stack):
         role = iam.Role(
             self,
             "LambdaExecutionRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com").grant_principal,
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaVPCAccessExecutionRole")
             ]
@@ -189,27 +191,47 @@ class CaliforniaHousingPipelineStack(Stack):
         self.data_bucket.grant_read(role)
         self.db_credentials.grant_read(role)
         return role
+    
+
+    def _create_lambda_layer(self) -> lambda_.LayerVersion:
+        return lambda_.LayerVersion(
+            self,
+            f"CalHousingDependenciesLayer{self.env_name.capitalize()}",  # Using a unique name with environment
+            layer_version_name=f"california-housing-dependencies-{self.env_name}",
+            code=lambda_.Code.from_asset(
+            ".",
+            bundling=core.BundlingOptions(
+                image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                command=[
+                    "bash", "-c",
+                    "pip install --no-cache-dir -r lambda-requirements.txt --only-binary=:all: " +
+                    "--platform manylinux2014_x86_64 --target /asset-output/python && " +
+                    "find /asset-output -type d -name '__pycache__' -exec rm -rf {} +; " +
+                    "find /asset-output -type d -name '*.dist-info' -exec rm -rf {} +; " +
+                    "find /asset-output -type d -name '*.egg-info' -exec rm -rf {} +; " +
+                    "find /asset-output -name '*.pyc' -delete"
+                ]
+            )
+        ),
+        compatible_runtimes=[lambda_.Runtime.PYTHON_3_11],
+        description="Dependencies for California Housing data processing",
+
+        )
 
 
     def _create_lambda_function(self) -> lambda_.Function:
+        dependencies_layer = self.lambda_layer
+
         return lambda_.Function(
             self,
             "CaliforniaHousingProcessorLambda",
             function_name=f"california-housing-processor-{self.env_name}",
             runtime=lambda_.Runtime.PYTHON_3_11,
-            code=lambda_.Code.from_asset(
-                ".",
-                bundling=core.BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
-                    command=[
-                        "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -r src/lambda_functions/* /asset-output/"
-                    ]
-                )
-            ),
+            code=lambda_.Code.from_asset("src/lambda_functions",  exclude=["__pycache__", "*.pyc"]),
             handler="handler.handler",
             timeout=core.Duration.minutes(5),
             memory_size=1024,
+            layers=[dependencies_layer],
             vpc=self.vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS if self.env_name == "prod" else ec2.SubnetType.PRIVATE_ISOLATED
@@ -222,7 +244,7 @@ class CaliforniaHousingPipelineStack(Stack):
             },
             role=self.lambda_role,
             log_retention=logs.RetentionDays.ONE_MONTH,
-            reserved_concurrent_executions=5 if self.env_name == "prod" else 2,
+           # reserved_concurrent_executions=5 if self.env_name == "prod" else 2,
             tracing=lambda_.Tracing.ACTIVE
         )
 

@@ -4,9 +4,4 @@ pydantic
 pydantic-settings
 psycopg2-binary
 pytest
-
 boto3
-aws-cdk-lib
-constructs
-cdk8s
-cfnresponse
