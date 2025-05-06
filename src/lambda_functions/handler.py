@@ -9,9 +9,9 @@ import boto3
 import traceback
 from typing import Dict, Any, List, Tuple
 
-from .data_processor import process_california_housing_data
-from .db_connector import RDSConnector
-from .utils import setup_logging, get_db_credentials
+from lambda_functions.data_processor import process_california_housing_data
+from lambda_functions.db_connector import RDSConnector
+from lambda_functions.utils import setup_logging, get_db_credentials
 from loguru import logger
 
 # Configure logging
