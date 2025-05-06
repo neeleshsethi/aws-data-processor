@@ -52,6 +52,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         with RDSConnector(db_credentials) as db:
             db.store_summary_statistics(summary_stats)
             logger.info("Successfully stored summary statistics in the database")
+            logger.info("Querying database to validate insertion")
+            latest_stats = db.query_latest_statistics()
+            logger.info(f"Successfully retrieved {len(latest_stats)} records from database")
         
         # Clean up
         os.remove(download_path)
