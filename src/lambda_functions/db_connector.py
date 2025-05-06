@@ -39,7 +39,7 @@ class RDSConnector:
                 host=self.db_config['host'],
                 port=self.db_config['port'],
                 dbname=self.db_config['dbname'],
-                user=self.db_config['user'],
+                user=self.db_config['username'],
                 password=self.db_config['password']
             )
             self.cursor = self.conn.cursor()
